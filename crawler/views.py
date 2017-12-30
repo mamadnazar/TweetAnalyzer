@@ -18,15 +18,57 @@ usersToAnalyze = ('ismetullah2', 'AhmadzaiMaher', 'ger_alt_j', 'acmilan', 'realD
 
 def addToUserOneTable(user):
     try:
-        uo = models.UserOne.objects.get(screenName=user.screen_name)
+        uo = models.UserOne.objects.get(screen_name=user.screen_name)
     except models.UserOne.DoesNotExist:
-        uo = models.UserOne(screenName=user.screen_name, name=user.name, userId = user.id)
+        uo = models.UserOne(screen_name=user.screen_name, name=user.name, user_ID = user.id)
         uo.save()
+    return uo
+
+def addFollowsToUserTwoTable(user):
+    for fid in api.friends_ids(user.screen_name):
+        print('{} follows {}...'.format(user.screen_name, fid))
+        try:
+            ut = models.UserTwo.objects.get(user_ID = fid)
+            ut.followed_by.add(user)
+        except models.UserTwo.DoesNotExist:
+            friend = api.get_user(id=fid)
+            ut = models.UserTwo(screen_name=friend.screen_name, name=friend.name, user_ID=friend.id)
+            ut.save()
+            ut.followed_by.add(user)
+
+def getUserTweets(userO, user):
+    tweetCount = user.statuses_count
+    print('Getting {} tweets of {}'.format(tweetCount, userO.screen_name))
+    oldest = user.status.id
+    contents = ''
+    count = 0
+
+    while True:
+        tweets = api.user_timeline(id = user.id, count=200, max_id = oldest)
+        if len(tweets) < 1:
+            break
+        count += len(tweets)
+        oldest = tweets.max_id
+        for tweet in tweets:
+            contents += tweet.text + ' '
+    print('{} tweets of {} were stored'.format(count, userO.screen_name))
+
+    try:
+        tweet = models.Tweet.objects.get(user=userO)
+        tweet.text = contents
+        tweet.save()
+    except models.Tweet.DoesNotExist:
+        tweet = models.Tweet(text=contents, user = userO)
+        tweet.save()
 
 def index(request):
-    for username in usersToAnalyze:
-        thisUser = api.get_user(username)
-        addToUserOneTable(thisUser)
+    for screenName in usersToAnalyze:
+        thisUser = api.get_user(screenName)
+        uo = addToUserOneTable(thisUser)
+        print(uo.screen_name)
+        addFollowsToUserTwoTable(uo)
+        # if uo.screen_name == 'Ismetullah2' or uo.screen_name == 'ger_alt_j':
+        getUserTweets(uo, thisUser)
 
     stri = ''
     public_tweets = api.home_timeline()
