@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import UserOne, UserTwo, SportsKW, Tweet
+from .models import UserOne, UserTwo, UserOneTweet, UserTwoTweet, UserOneHit, UserTwoHit
 
 # Register your models here.
 
@@ -21,5 +21,7 @@ class UserTwoAdmin(admin.ModelAdmin):
 
 admin.site.register(UserOne, UserOneAdmin)
 admin.site.register(UserTwo, UserTwoAdmin)
-admin.site.register(SportsKW)
-admin.site.register(Tweet)
+admin.site.register(UserOneTweet)
+admin.site.register(UserTwoTweet)
+admin.site.register(UserOneHit)
+admin.site.register(UserTwoHit)

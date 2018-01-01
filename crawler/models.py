@@ -10,6 +10,7 @@ class UserOne(models.Model):
     def __str__(self):
         return self.name + ' ' + str(self.user_ID)
 
+
 class UserTwo(models.Model):
     name = models.CharField(max_length=100, null=False)
     screen_name = models.CharField(max_length=100, null=False, unique=True)
@@ -20,18 +21,39 @@ class UserTwo(models.Model):
     def __str__(self):
         return self.name + ' ' + str(self.user_ID)
 
-class SportsKW(models.Model):
-    count = models.IntegerField(default=0)
-    name = models.CharField(max_length=100)
-
+class UserOneTweet(models.Model):
     user = models.ForeignKey(UserOne, on_delete=models.CASCADE)
-
-    def __str__(self):
-        return '{}: {}'.format(self.name, self.count)
-
-class Tweet(models.Model):
     text = models.TextField()
-    user = models.ForeignKey(UserOne, on_delete=models.CASCADE)
 
     def __str__(self):
         return 'Tweets of {}'.format(self.user.name)
+
+
+class UserTwoTweet(models.Model):
+    user = models.ForeignKey(UserTwo, on_delete=models.CASCADE)
+    text = models.TextField()
+
+    def __str__(self):
+        return 'Tweets of {}'.format(self.user.name)
+
+class UserOneHit(models.Model):
+    user = models.ForeignKey(UserOne, on_delete=models.CASCADE)
+
+    sport = models.IntegerField(default=0)
+    news = models.IntegerField(default=0)
+    politics = models.IntegerField(default=0)
+    computers = models.IntegerField(default=0)
+
+    def __str__(self):
+        return 'Hit counter of {}'.format(self.user)
+
+class UserTwoHit(models.Model):
+    user = models.ForeignKey(UserTwo, on_delete=models.CASCADE)
+
+    sport = models.IntegerField(default=0)
+    news = models.IntegerField(default=0)
+    politics = models.IntegerField(default=0)
+    computers = models.IntegerField(default=0)
+
+    def __str__(self):
+        return 'Hit counter of {}'.format(self.user)
