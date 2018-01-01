@@ -44,7 +44,8 @@ themes = {
 }
 KWTHEMES = {'sport': 0, 'news': 0, 'politics': 0, 'education': 0, 'computers': 0}
 
-usersToAnalyze = ('ismetullah2', 'AhmadzaiMaher', 'ger_alt_j', 'acmilan', 'realDonaldTrump')
+# usersToAnalyze = ('ismetullah2', 'AhmadzaiMaher', 'ger_alt_j', 'acmilan', 'realDonaldTrump')
+usersToAnalyze = ('ismetullah2', 'AhmadzaiMaher', 'ger_alt_j')
 
 def countKeywords(userObject):
     print('Analyzing keywords of user {}'.format(userObject.screen_name))
@@ -125,6 +126,7 @@ def getUserTweets(userObject, user):
         if len(tweets) < 1:
             break
         count += len(tweets)
+        print('~{}% of tweets are processed..'.format(count/32))
         oldest = tweets.max_id
         for tw in tweets:
             contents += tw.text + ' '
@@ -183,7 +185,7 @@ def index(request):
                 for k, v in utHits.items():
                     content[uo.screen_name]['linkedUsers'][k] += v
             except models.UserTwoHit.DoesNotExist:
-                # print('No hit data for {}'.format(utIn.screen_name))
+                print('No hit data for {}'.format(utIn.screen_name))
                 pass
 
     print(content)
