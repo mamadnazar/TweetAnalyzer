@@ -1,6 +1,8 @@
 from django.http import HttpResponse
 from django.forms.models import model_to_dict
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render
+from django.template import Context
+
 import tweepy
 from collections import Counter
 
@@ -55,7 +57,7 @@ def countKeywords(userObject):
 
         words = re.findall(r'\w+', userTweets.text)
         wordCounts = Counter(words)
-        hits = KWTHEMES
+        hits = dict(KWTHEMES)
         for kw, kwlist in themes.items():
             for kword in kwlist:
                 hits[kw] += wordCounts[kword]
@@ -169,19 +171,20 @@ def index(request):
             print('No hit data for {}'.format(uo.screen_name))
             uohits = {}
         content[uo.screen_name] = uohits
-
-        content[uo.screen_name]['linkedUsers'] = KWTHEMES
+        content[uo.screen_name]['linkedUsers'] = dict(KWTHEMES)
+        print(KWTHEMES)
 
         utInstances = models.UserTwo.objects.filter(followed_by=uo)
         for utIn in utInstances:
+            print('Following {}'.format(utIn.screen_name))
             try:
                 utIn = models.UserTwoHit.objects.get(user=utIn)
                 utHits = model_to_dict(utIn, fields=('sport', 'news', 'politics', 'education', 'computers'))
                 for k, v in utHits.items():
                     content[uo.screen_name]['linkedUsers'][k] += v
-
             except models.UserTwoHit.DoesNotExist:
-                print('No hit data for {}'.format(uo.screen_name))
+                # print('No hit data for {}'.format(utIn.screen_name))
+                pass
 
     print(content)
-    return HttpResponse(repr(content))
+    return render(request, 'crawler/report.html', {'report': content})

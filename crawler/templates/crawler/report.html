@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+{% load template_tags %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Report</title>
+</head>
+<body>
+
+<table border="1pt solid">
+    <th rowspan="2">User</th>
+    <th rowspan="2">Sport</th>
+    <th rowspan="2">News</th>
+    <th rowspan="2">Politics</th>
+    <th rowspan="2">Education</th>
+    <th rowspan="2">Computers</th>
+    <tr></tr>
+
+    {% for user, values in report.items%}
+        <tr>
+            <td> {{ user }}</td>
+            {% for kw, kwc in values.items %}
+                {% if not forloop.last %}
+                <td> {{ kwc }} </td>
+                {% else %}
+                    <tr>
+                    <td> People followed by {{ user }} </td>
+                    {% for kwor, kwco in kwc.items %}
+                        <td> {{ kwco }} </td>
+                    {% endfor %}
+                    </tr>
+                {% endif %}
+
+            {% endfor %}
+        </tr>
+    {% endfor %}
+</table>
+
+
+
+
+</body>
+</html>
