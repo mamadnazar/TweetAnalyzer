@@ -1,7 +1,8 @@
-from django.contrib.contenttypes.models import ContentType
 from django.http import HttpResponse
-import json
 import tweepy
+from collections import Counter
+
+import re
 
 from . import models
 
@@ -15,33 +16,88 @@ auth.set_access_token(access_token, access_secret)
 
 api = tweepy.API(auth)
 
-sports_keywords = ('sport', 'football', 'sports', 'box', 'спорт', 'футбол', 'spectator','extreme', 'friendly','competition', 'match', 'game', 'played', 'games', 'hockey', 'tennis', 'ball', 'training')
-news_keywords = ('news', 'breaking', 'weather', 'новость', 'information', 'communicating', 'people', 'television', 'newspapers', 'mass', 'attention', 'opinions')
-politics = ('president', 'administration', 'government', 'affairs', 'politics', 'country', 'political', 'influence', 'governing', 'organizations', 'sociopolitical')
-education = ('education', 'college', 'university', 'students', 'school', 'training', 'degree', 'study', 'advanced', 'learning', 'methods', 'science', 'knowledge', 'tutor', 'teacher')
-computers = ('', )
+themes = {
+    'sport': (
+        'sport', 'football', 'sports', 'box', 'спорт', 'футбол', 'spectator', 'extreme', 'friendly', 'competition',
+        'match', 'game', 'played', 'games', 'hockey', 'tennis', 'ball', 'training'),
+    'news': (
+        'news', 'breaking', 'weather', 'новость', 'information', 'communicating', 'people', 'television', 'newspapers',
+        'mass',
+        'attention', 'opinions'),
+    'politics': (
+        'president', 'administration', 'government', 'affairs', 'politics', 'country', 'political', 'influence',
+        'governing',
+        'organizations', 'sociopolitical'),
+    'education': (
+        'education', 'college', 'university', 'students', 'school', 'training', 'degree', 'study', 'advanced',
+        'learning',
+        'methods', 'science', 'knowledge', 'tutor', 'teacher'),
+    'computers': (
+        'browsers', 'byte', 'server', 'architecture', 'computer', 'system', 'bit', 'device', 'disc', 'network',
+        'protocol', 'interface', 'operating', 'bitcoin', 'development', 'software', 'hardware', 'programming', 'python',
+        'android',
+        'ios')
+}
 
 usersToAnalyze = ('ismetullah2', 'AhmadzaiMaher', 'ger_alt_j', 'acmilan', 'realDonaldTrump')
 
-'''
-def countKeywords():
-    words = re.findall(r'\w+', tt.lower())
-'''
+def countKeywords(userObject):
+    print('Analyzing keywords of user {}'.format(userObject.screen_name))
+    userClass = userObject.__class__.__name__
+    try:
+        if userClass == 'UserOne':
+            userTweets = models.UserOneTweet.objects.get(user=userObject)
+        else:
+            userTweets = models.UserTwoTweet.objects.get(user=userObject)
+
+        words = re.findall(r'\w+', userTweets.text)
+        wordCounts = Counter(words)
+        hits = {'sport': 0, 'news': 0, 'politics': 0, 'education': 0, 'computers': 0}
+        for kw, kwlist in themes.items():
+            for kword in kwlist:
+                hits[kw] += wordCounts[kword]
+        try:
+            if userClass == 'UserOne':
+                userObjectHits = models.UserOneHit.objects.get(user=userObject)
+                models.UserOneHit.objects.filter(user=userObject).update(**hits)
+            else:
+                userObjectHits = models.UserTwoHit.objects.get(user=userObject)
+                models.UserTwoHit.objects.filter(user=userObject).update(**hits)
+
+        except (models.UserTwoHit.DoesNotExist, models.UserOneHit.DoesNotExist):
+            if userClass == 'UserOne':
+                userObjectHits = models.UserOneHit(user=userObject, sport=hits['sport'], news=hits['news'], politics=hits['politics'],
+                                        education=hits['education'], computers=hits['computers'])
+                userObjectHits.save()
+            else:
+                userObjectHits = models.UserTwoHit(user=userObject, sport=hits['sport'], news=hits['news'],
+                                                   politics=hits['politics'],
+                                                   education=hits['education'], computers=hits['computers'])
+                userObjectHits.save()
+
+    except (models.UserOneTweet.DoesNotExist, models.UserTwoTweet.DoesNotExist):
+        print('User {} has no tweets'.format(userObject.screen_name))
+        return HttpResponse('User {} has no sufficient data to analyze'.format(userObject.screen_name))
+
 
 def addToUserOneTable(user):
     try:
         uo = models.UserOne.objects.get(screen_name=user.screen_name)
     except models.UserOne.DoesNotExist:
-        uo = models.UserOne(screen_name=user.screen_name, name=user.name, user_ID = user.id)
+        uo = models.UserOne(screen_name=user.screen_name, name=user.name, user_ID=user.id)
         uo.save()
     return uo
 
+
 def addFollowsToUserTwoTable(user):
-    for fid in api.friends_ids(user.screen_name):
+    friendIDS = api.friends_ids(user.screen_name)
+    if len(friendIDS) == 0:
+        return False
+    for fid in friendIDS:
         print('{} follows {}'.format(user.screen_name, api.get_user(id=fid).screen_name, fid))
         friend = api.get_user(id=fid)
         try:
-            ut = models.UserTwo.objects.get(user_ID = fid)
+            ut = models.UserTwo.objects.get(user_ID=fid)
             ut.followed_by.add(user)
         except models.UserTwo.DoesNotExist:
             ut = models.UserTwo(screen_name=friend.screen_name, name=friend.name, user_ID=friend.id)
@@ -49,15 +105,18 @@ def addFollowsToUserTwoTable(user):
             ut.followed_by.add(user)
         getUserTweets(ut, friend)
 
+
 def getUserTweets(userObject, user):
     tweetCount = user.statuses_count
+    if tweetCount == 0:
+        return False
     print('Getting {} tweets of {}'.format(tweetCount, userObject.screen_name))
     oldest = user.status.id
     contents = ''
     count = 0
 
     while True:
-        tweets = api.user_timeline(id = user.id, count=200, max_id = oldest)
+        tweets = api.user_timeline(id=user.id, count=200, max_id=oldest)
         if len(tweets) < 1:
             break
         count += len(tweets)
@@ -76,12 +135,14 @@ def getUserTweets(userObject, user):
         tweet.text = contents
         tweet.save()
     except (models.UserOneTweet.DoesNotExist, models.UserTwoTweet.DoesNotExist):
-        print('here 3')
         if userClass == 'UserOne':
             tweet = models.UserOneTweet(text=contents, user=userObject)
         else:
             tweet = models.UserTwoTweet(text=contents, user=userObject)
         tweet.save()
+
+    if userClass == 'UserTwo':
+        countKeywords(userObject)
 
 def index(request):
     for screenName in usersToAnalyze:
@@ -90,6 +151,7 @@ def index(request):
         print('Getting info of {}'.format(uo.screen_name))
         getUserTweets(uo, thisUser)
         addFollowsToUserTwoTable(uo)
+        countKeywords(uo)
 
     stri = ''
     public_tweets = api.home_timeline()

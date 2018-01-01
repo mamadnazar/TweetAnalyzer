@@ -8,7 +8,7 @@ class UserOne(models.Model):
     user_ID = models.IntegerField(null=True, unique=True)
 
     def __str__(self):
-        return self.name + ' ' + str(self.user_ID)
+        return '{} {}'.format(self.name, self.screen_name)
 
 
 class UserTwo(models.Model):
@@ -19,7 +19,7 @@ class UserTwo(models.Model):
     followed_by = models.ManyToManyField(UserOne, related_name='follows', verbose_name='Followers')
 
     def __str__(self):
-        return self.name + ' ' + str(self.user_ID)
+        return '{} {}'.format(self.name, self.screen_name)
 
 class UserOneTweet(models.Model):
     user = models.ForeignKey(UserOne, on_delete=models.CASCADE)
@@ -42,6 +42,7 @@ class UserOneHit(models.Model):
     sport = models.IntegerField(default=0)
     news = models.IntegerField(default=0)
     politics = models.IntegerField(default=0)
+    education = models.IntegerField(default=0)
     computers = models.IntegerField(default=0)
 
     def __str__(self):
@@ -53,6 +54,7 @@ class UserTwoHit(models.Model):
     sport = models.IntegerField(default=0)
     news = models.IntegerField(default=0)
     politics = models.IntegerField(default=0)
+    education = models.IntegerField(default=0)
     computers = models.IntegerField(default=0)
 
     def __str__(self):
