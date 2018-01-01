@@ -44,8 +44,7 @@ themes = {
 }
 KWTHEMES = {'sport': 0, 'news': 0, 'politics': 0, 'education': 0, 'computers': 0}
 
-# usersToAnalyze = ('ismetullah2', 'AhmadzaiMaher', 'ger_alt_j', 'acmilan', 'realDonaldTrump')
-usersToAnalyze = ('ismetullah2', 'AhmadzaiMaher', 'ger_alt_j')
+usersToAnalyze = ('ismetullah2', 'ger_alt_j', 'acmilan', 'realDonaldTrump')
 
 def countKeywords(userObject):
     print('Analyzing keywords of user {}'.format(userObject.screen_name))
@@ -109,13 +108,29 @@ def addFollowsToUserTwoTable(user):
             ut = models.UserTwo(screen_name=friend.screen_name, name=friend.name, user_ID=friend.id)
             ut.save()
             ut.followed_by.add(user)
-        getUserTweets(ut, friend)
 
+        try:
+            uo = models.UserOne.objects.get(user_ID=fid)
+            print('----- User {} is already in table UserOne'.format(ut.screen_name))
+            try:
+                uotweets = models.UserOneTweet.objects.get(user=uo)
+                print('Copying tweets from UserOneTweet table to UserTwoTweet table')
+                tweetText = uotweets.text
+                uttweets = models.UserTwoTweet(text=tweetText, user=ut)
+                uttweets.save()
+            except models.UserOneTweet.DoesNotExist:
+                getUserTweets(ut, friend)
+                return
+        except models.UserOne.DoesNotExist:
+            getUserTweets(ut, friend)
 
 def getUserTweets(userObject, user):
     tweetCount = user.statuses_count
     if tweetCount == 0:
         return False
+    perc = tweetCount / 100
+    if tweetCount > 3200:
+        perc = 33
     print('Getting {} tweets of {}'.format(tweetCount, userObject.screen_name))
     oldest = user.status.id
     contents = ''
@@ -126,7 +141,7 @@ def getUserTweets(userObject, user):
         if len(tweets) < 1:
             break
         count += len(tweets)
-        print('~{}% of tweets are processed..'.format(count/32))
+        print('~{}% of tweets are processed..'.format(int(count/perc)))
         oldest = tweets.max_id
         for tw in tweets:
             contents += tw.text + ' '
