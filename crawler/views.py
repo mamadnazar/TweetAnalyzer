@@ -1,4 +1,6 @@
 from django.http import HttpResponse
+from django.forms.models import model_to_dict
+from django.shortcuts import render, get_object_or_404
 import tweepy
 from collections import Counter
 
@@ -38,6 +40,7 @@ themes = {
         'android',
         'ios')
 }
+KWTHEMES = {'sport': 0, 'news': 0, 'politics': 0, 'education': 0, 'computers': 0}
 
 usersToAnalyze = ('ismetullah2', 'AhmadzaiMaher', 'ger_alt_j', 'acmilan', 'realDonaldTrump')
 
@@ -52,7 +55,7 @@ def countKeywords(userObject):
 
         words = re.findall(r'\w+', userTweets.text)
         wordCounts = Counter(words)
-        hits = {'sport': 0, 'news': 0, 'politics': 0, 'education': 0, 'computers': 0}
+        hits = KWTHEMES
         for kw, kwlist in themes.items():
             for kword in kwlist:
                 hits[kw] += wordCounts[kword]
@@ -144,7 +147,7 @@ def getUserTweets(userObject, user):
     if userClass == 'UserTwo':
         countKeywords(userObject)
 
-def index(request):
+def updateDB(request):
     for screenName in usersToAnalyze:
         thisUser = api.get_user(screenName)
         uo = addToUserOneTable(thisUser)
@@ -153,8 +156,32 @@ def index(request):
         addFollowsToUserTwoTable(uo)
         countKeywords(uo)
 
-    stri = ''
-    public_tweets = api.home_timeline()
-    for tweet in public_tweets:
-        stri += tweet.text + '\n'
-    return HttpResponse(stri)
+def index(request):
+    content = {}
+    uoqs = models.UserOne.objects.all()
+
+    for uo in uoqs:
+        print('In index: {}'.format(uo.screen_name))
+        try:
+            uohitInstance = models.UserOneHit.objects.get(user = uo)
+            uohits = model_to_dict(uohitInstance, fields=('sport', 'news', 'politics', 'education', 'computers'))
+        except models.UserOneHit.DoesNotExist:
+            print('No hit data for {}'.format(uo.screen_name))
+            uohits = {}
+        content[uo.screen_name] = uohits
+
+        content[uo.screen_name]['linkedUsers'] = KWTHEMES
+
+        utInstances = models.UserTwo.objects.filter(followed_by=uo)
+        for utIn in utInstances:
+            try:
+                utIn = models.UserTwoHit.objects.get(user=utIn)
+                utHits = model_to_dict(utIn, fields=('sport', 'news', 'politics', 'education', 'computers'))
+                for k, v in utHits.items():
+                    content[uo.screen_name]['linkedUsers'][k] += v
+
+            except models.UserTwoHit.DoesNotExist:
+                print('No hit data for {}'.format(uo.screen_name))
+
+    print(content)
+    return HttpResponse(repr(content))
