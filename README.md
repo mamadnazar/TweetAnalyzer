@@ -1,3 +1,3 @@
 # Final Project for Programming Languages course
 
-Interests by Tweets
+Gathering information about interests of people from twitter by analyzing their tweets and users they follow
